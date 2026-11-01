@@ -22,8 +22,9 @@ CI بلا خدمات مغلقة (شرط F-Droid المحتمل: لا Google Play
 ## القرار المقترح
 
 **Kotlin + Jetpack Compose، Gradle Kotlin DSL، مشروع متعدد الوحدات** كما في
-[ARCHITECTURE](../ARCHITECTURE.md). `minSdk = 26` (أندرويد 8.0)، و`targetSdk` = أحدث إصدار مستقر
-وقت بدء المرحلة 1، ويُثبَّت برقم صريح في PR المرحلة 1 لا هنا.
+[ARCHITECTURE](../ARCHITECTURE.md). `minSdk = 26` (أندرويد 8.0) — **محسوم** في
+[ADR-0010](0010-min-sdk.md)، واسم الحزمة `io.github.brovimome.hisn` في [ADR-0011](0011-application-id.md).
+و`targetSdk` = أحدث إصدار مستقر وقت بدء المرحلة 1، يُثبَّت برقم صريح في PR المرحلة 1 لا هنا.
 
 ## السبب
 

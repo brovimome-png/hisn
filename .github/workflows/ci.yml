@@ -1,0 +1,104 @@
+name: CI
+
+# يعمل مع كل Pull Request (وعلى main بعد الدمج، ليكشف التدهور مبكرًا).
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# أقل صلاحيات ممكنة: القراءة فقط.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1) الوثائق: فحص الروابط النسبية بين ملفات Markdown.
+  #    هذا هو الفحص الفعلي في المرحلة 0 (لا كود بعد).
+  # ---------------------------------------------------------------------------
+  docs:
+    name: docs / روابط Markdown
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: فحص الروابط النسبية (بلا شبكة)
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --offline
+            --no-progress
+            --verbose
+            README.md
+            AGENTS.md
+            docs
+          fail: true
+
+  # ---------------------------------------------------------------------------
+  # 2) أندرويد: بناء + lint + اختبارات وحدة.
+  #    يفعّل نفسه تلقائيًا حين يوجد مشروع Gradle (المرحلة 1)، ويُتخطّى الآن
+  #    برسالة واضحة بدل أن يفشل بلا سبب.
+  # ---------------------------------------------------------------------------
+  android:
+    name: android / بناء واختبارات
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: هل يوجد مشروع Gradle؟
+        id: detect
+        shell: bash
+        run: |
+          if [ -f gradlew ] && { [ -f settings.gradle.kts ] || [ -f settings.gradle ]; }; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "Gradle project detected."
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "No Gradle project yet (foundation phase) — skipping Android build."
+          fi
+
+      - name: تنبيه تخطّي
+        if: steps.detect.outputs.present != 'true'
+        run: |
+          echo "::notice title=Android build skipped::لا يوجد مشروع Gradle بعد (مرحلة التأسيس)."
+
+      - name: إعداد Java
+        if: steps.detect.outputs.present == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: التحقق من Gradle Wrapper
+        if: steps.detect.outputs.present == 'true'
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: إعداد Gradle (مع التخزين المؤقت)
+        if: steps.detect.outputs.present == 'true'
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: بناء + lint + اختبارات وحدة
+        if: steps.detect.outputs.present == 'true'
+        shell: bash
+        run: |
+          set -o pipefail
+          chmod +x ./gradlew
+          ./gradlew --no-daemon --stacktrace \
+            lintDebug testDebugUnitTest assembleDebug
+
+      - name: رفع تقارير الاختبار عند الفشل
+        if: failure() && steps.detect.outputs.present == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            **/build/reports/tests/**
+            **/build/reports/lint-results-*.html
+          if-no-files-found: ignore
+          retention-days: 7

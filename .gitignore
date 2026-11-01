@@ -1,0 +1,28 @@
+# Android / Gradle
+.gradle/
+build/
+local.properties
+captures/
+.cxx/
+*.iml
+.idea/
+.kotlin/
+
+# مفاتيح التوقيع والملفات السرية — لا تُرفع أبدًا
+*.jks
+*.keystore
+*.p12
+*.pem
+.env
+.env.*
+secrets.properties
+keystore.properties
+
+# أدوات ومخرجات
+.DS_Store
+Thumbs.db
+*.log
+.freebuff/
+
+# ملفات إضافية
+*.hprof
